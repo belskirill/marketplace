@@ -1,16 +1,17 @@
 package service
 
 import (
-	httperr "bots/internal/errors"
+	"bots/internal/security"
 	"bots/internal/user/http/dto"
 	"bots/internal/user/repositories/postgres"
+	httperr "bots/pkg/errors"
 	"context"
 
 	"go.uber.org/zap"
 )
 
 type UserService interface {
-	GetUsers(ctx context.Context, req dto.RegisterUserRequest) (dto.UserResponse, error)
+	RegisterUser(ctx context.Context, req dto.RegisterUserRequest) (dto.UserResponse, error)
 }
 
 func NewService(db postgres.DatabaseRepository, logger *zap.Logger) UserService {
@@ -25,7 +26,15 @@ type Service struct {
 	logger *zap.Logger
 }
 
-func (s *Service) GetUsers(ctx context.Context, req dto.RegisterUserRequest) (dto.UserResponse, error) {
+func (s *Service) RegisterUser(ctx context.Context, req dto.RegisterUserRequest) (dto.UserResponse, error) {
+	hashPass, err := security.HashPassword(req.Password)
+	if err != nil {
+		return dto.UserResponse{}, httperr.New(httperr.CodeInternal,
+			"failed to hash password",
+			nil,
+		)
+	}
+	req.Password = hashPass
 	resp, err := s.db.Create(ctx, &req)
 	if err != nil {
 		switch err {

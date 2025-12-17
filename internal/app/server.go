@@ -34,12 +34,12 @@ func NewServer(addr string) (*http.Server, *sql.DB) {
 	userSrv := service.NewService(dbRepo, logger)
 	userHandler := hndlr.NewHandler(userSrv, logger)
 
-	mux.HandleFunc("/register", userHandler.GetUsers)
+	mux.HandleFunc("/register", userHandler.CreateUser)
+	mux.HandleFunc("/login", userHandler.Login)
 
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: mux,
 	}
 	return srv, conn
-
 }
