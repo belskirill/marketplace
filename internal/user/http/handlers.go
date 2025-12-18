@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bots/internal/http/cookies"
 	"bots/internal/user/http/dto"
 	"bots/internal/user/service"
 	httperr "bots/pkg/errors"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 
 	mdlwr "bots/internal/http"
+
 	"github.com/go-playground/validator/v10"
 )
 
@@ -73,16 +75,9 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) error {
 	}
 	res, err := h.service.LoginUser(r.Context(), req)
 	if err != nil {
+
 		return err
 	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
-		Value:    res,
-		Path:     "/",
-		HttpOnly: true,                 // JS не видит токен
-		SameSite: http.SameSiteLaxMode, // или Strict
-		MaxAge:   15 * 60,              // 15 минут
-	})
+	cookies.SetCokies(w, "access_token", res, http.SameSiteLaxMode, 15*60)
 	return mdlwr.RespondJSON(w, http.StatusNoContent, nil)
 }
