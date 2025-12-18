@@ -24,7 +24,6 @@ const (
 
 type HTTPError struct {
 	Code    Code              `json:"code"`
-	Status  int               `json:"status"`
 	Message string            `json:"message"`
 	Fields  map[string]string `json:"fields,omitempty"`
 	Err     error             `json:"-"`
@@ -111,11 +110,7 @@ func Write(w http.ResponseWriter, r *http.Request, op string, logger *zap.Logger
 	w.WriteHeader(status)
 
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"error": map[string]any{
-			"code":    e.Code,
-			"message": e.Message,
-			"fields":  e.Fields,
-		},
+		"error":      e,
 		"request_id": w.Header().Get("X-Request-Id"),
 	})
 }
@@ -140,4 +135,8 @@ func NewInvalidInput(msg string, fields map[string]string) *HTTPError {
 
 func NewNotFound(msg string, fields map[string]string) *HTTPError {
 	return New(CodeNotFound, msg, fields)
+}
+
+func NewUnauthenticated(msg string, fields map[string]string) *HTTPError {
+	return New(CodeUnauthenticated, msg, fields)
 }

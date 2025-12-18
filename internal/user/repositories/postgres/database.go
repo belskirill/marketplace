@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
@@ -13,11 +14,13 @@ import (
 var (
 	ErrEmailTaken    = errors.New("email already exists")
 	ErrUsernameTaken = errors.New("username already exists")
+	ErrUserNotFound  = errors.New("Invalid Credentials")
 )
 
 type DatabaseRepository interface {
 	GetUsers(ctx context.Context)
 	Create(ctx context.Context, req *dto.RegisterUserRequest) (dto.UserResponse, error)
+	GetUserNyEmailOrUsername(ctx context.Context, req dto.LoginUserRequest) (string, error)
 }
 
 func NewDatabaseRepository(db *sql.DB, logger *zap.Logger) DatabaseRepository {
@@ -61,4 +64,21 @@ func (repo *Database) Create(ctx context.Context, req *dto.RegisterUserRequest) 
 	}
 
 	return resp, nil
+}
+
+func (repo *Database) GetUserNyEmailOrUsername(ctx context.Context, req dto.LoginUserRequest) (string, error) {
+	var pass string
+
+	const query = `
+	SELECT password_hash
+	FROM users
+	WHERE username = $1 OR email = $2
+`
+	err := repo.db.QueryRowContext(ctx, query,
+		req.Username, req.Email,
+	).Scan(&pass)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrUserNotFound
+	}
+	return pass, nil
 }

@@ -12,6 +12,7 @@ import (
 
 type UserService interface {
 	RegisterUser(ctx context.Context, req dto.RegisterUserRequest) (dto.UserResponse, error)
+	LoginUser(ctx context.Context, req dto.LoginUserRequest) (string, error)
 }
 
 func NewService(db postgres.DatabaseRepository, logger *zap.Logger) UserService {
@@ -50,4 +51,22 @@ func (s *Service) RegisterUser(ctx context.Context, req dto.RegisterUserRequest)
 	}
 
 	return resp, nil
+}
+
+func (s *Service) LoginUser(ctx context.Context, req dto.LoginUserRequest) (string, error) {
+	pass, err := s.db.GetUserNyEmailOrUsername(ctx, req)
+	if err != nil {
+		switch err {
+		case postgres.ErrUserNotFound:
+			return "", httperr.NewNotFound("Пользователь не найден", map[string]string{
+				"user": "invalid credentials",
+			})
+		default:
+			return "", httperr.Wrap(httperr.CodeInternal, "не удалось найти пользователя", nil, err)
+		}
+	}
+	if !security.CheckPasswordHash(req.Password, pass) {
+		return "", httperr.NewUnauthenticated("Неверный пароль", nil)
+	}
+	return pass, nil
 }

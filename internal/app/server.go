@@ -1,6 +1,7 @@
 package app
 
 import (
+	wrap "bots/internal/http/middleware"
 	hndlr "bots/internal/user/http"
 	"bots/internal/user/repositories/postgres"
 	"bots/internal/user/service"
@@ -32,10 +33,10 @@ func NewServer(addr string) (*http.Server, *sql.DB) {
 	}
 	dbRepo := postgres.NewDatabaseRepository(conn, logger)
 	userSrv := service.NewService(dbRepo, logger)
-	userHandler := hndlr.NewHandler(userSrv, logger)
+	userHandler := hndlr.NewHandler(userSrv)
 
-	mux.HandleFunc("/register", userHandler.CreateUser)
-	mux.HandleFunc("/login", userHandler.Login)
+	mux.HandleFunc("/register", wrap.Wrap(userHandler.CreateUser, logger, "user.register"))
+	mux.HandleFunc("/login", wrap.Wrap(userHandler.Login, logger, "user.login"))
 
 	srv := &http.Server{
 		Addr:    addr,
